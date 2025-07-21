@@ -1,0 +1,6 @@
+# Ignore all Python cache folders and compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore all .pth files
+*.pth
