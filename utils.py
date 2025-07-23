@@ -501,3 +501,20 @@ def auto_load_model(args, model, model_without_ddp, optimizer, loss_scaler, mode
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
+
+class EarlyStopping:
+    def __init__(self, patience=10):
+        self.best_score = None
+        self.counter = 0
+        self.patience = patience
+        self.early_stop = False
+
+    def step(self, score):
+        if self.best_score is None or score > self.best_score:
+            self.best_score = score
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
+        return self.early_stop

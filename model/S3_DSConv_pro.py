@@ -50,7 +50,8 @@ class DSConv_pro(nn.Module):
 
         # self.bn = nn.BatchNorm2d(2 * kernel_size)
         self.gn_offset = nn.GroupNorm(kernel_size, 2 * kernel_size)
-        self.gn = nn.GroupNorm(out_channels // 4, out_channels)
+        # self.gn = nn.GroupNorm(out_channels // 4, out_channels)
+        self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
         self.tanh = nn.Tanh()
 
@@ -97,7 +98,7 @@ class DSConv_pro(nn.Module):
             output = self.dsc_conv_y(deformed_feature)
 
         # Groupnorm & ReLU
-        output = self.gn(output)
+        output = self.bn(output)
         output = self.relu(output)
 
         return output
