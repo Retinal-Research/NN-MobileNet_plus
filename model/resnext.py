@@ -7,7 +7,7 @@ MIT license
 import torch
 import torch.nn as nn
 from math import ceil
-
+from model.S3_DSConv_pro import DSConv_pro
 # Memory-efficient Siwsh using torch.jit.script borrowed from the code in (https://twitter.com/jeremyphoward/status/1188251041835315200)
 # Currently use memory-efficient SiLU as default:
 USE_MEMORY_EFFICIENT_SiLU = True
@@ -61,6 +61,24 @@ def ConvBNAct(out, in_channels, channels, kernel=1, stride=1, pad=0,
     if active:
         out.append(nn.ReLU6(inplace=True) if relu6 else nn.ReLU(inplace=True))
 
+def DSConvBN(out,
+             in_channels,
+             out_channels,
+             kernel_size=9,
+             morph=0,               
+             extend_scope=1.0,
+             if_offset=True,
+             device='cuda'):
+    out.append(DSConv_pro(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        extend_scope=extend_scope,
+        morph=morph,
+        if_offset=if_offset,
+        device=device
+    ))
+    out.append(nn.BatchNorm2d(out_channels))
 
 def ConvBNSiLU(out, in_channels, channels, kernel=1, stride=1, pad=0, num_group=1):
     out.append(nn.Conv2d(in_channels, channels, kernel,
@@ -101,10 +119,11 @@ class LinearBottleneck(nn.Module):
             ConvBNSiLU(out, in_channels=in_channels, channels=dw_channels)
         else:
             dw_channels = in_channels
-
-        ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
-                  num_group=dw_channels, active=False)
-
+        if stride == 2:
+            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
+        else :
+            ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
+                      num_group=dw_channels, active=False)
         if use_se:
             out.append(SE(dw_channels, dw_channels, se_ratio))
 
@@ -188,3 +207,6 @@ class ReXNetV1(nn.Module):
         x = self.out(x).flatten(1)
         return x
 
+model = ReXNetV1(width_mult=3.0,classes=5,dropout_path=0.2)
+
+print(model)

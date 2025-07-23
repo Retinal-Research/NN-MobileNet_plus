@@ -25,6 +25,7 @@ from model.resnext import ReXNetV1
 from model.rexnetv2 import ReXNetV2
 
 from utils import NativeScalerWithGradNormCount as NativeScaler
+from utils import EarlyStopping
 import utils
 
 
@@ -369,7 +370,9 @@ def main(args):
         max_accuracy_ema = 0.0
     
     best_log_stats = None
-    
+    log_stats = None
+    early_stopping = EarlyStopping(patience=10)
+
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
@@ -414,7 +417,11 @@ def main(args):
                             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                             loss_scaler=loss_scaler, epoch="best", model_ema=model_ema)
                     if log_stats is not None:
-                        best_log_stats = log_stats.copy()
+                        best_log_stats = test_stats.copy()
+
+                if early_stopper.step(test_stats["auc"]):
+                    print(f"\n[Early Stop] No AUC improvement for {early_stopper.patience} epochs. Best AUC: {early_stopper.best_score:.4f}\n")
+                    break
                 print(f'Max auc: {max_accuracy:.2f}%')
             
             elif args.main_eval == 'kappa':

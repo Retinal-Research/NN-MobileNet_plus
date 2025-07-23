@@ -4,3 +4,6 @@ __pycache__/
 
 # Ignore all .pth files
 *.pth
+
+# Ignore Experiment floder
+Experiment/**
