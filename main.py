@@ -85,7 +85,7 @@ def get_args_parser():
     parser.add_argument('--layer_decay', type=float, default=1.0)
     parser.add_argument('--min_lr', type=float, default=1e-6, metavar='LR',
                         help='lower lr bound for cyclic schedulers that hit 0 (1e-6)')
-    parser.add_argument('--warmup_epochs', type=int, default=20, metavar='N',
+    parser.add_argument('--warmup_epochs', type=int, default=10, metavar='N',
                         help='epochs to warmup LR, if scheduler supports')
     parser.add_argument('--warmup_steps', type=int, default=-1, metavar='N',
                         help='num of steps to warmup LR, will overload warmup_epochs if set > 0')
@@ -279,9 +279,9 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     model = ReXNetV1(width_mult=3.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    # model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
+    model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
 
-    model.load_state_dict(torch.load('Experiment/EyeQ_ALL/checkpoint-best.pth')['model'],strict=True)
+    # model.load_state_dict(torch.load('Experiment/EyeQ_ALL/checkpoint-best.pth')['model'],strict=True)
 
     model.to(device)
 
@@ -367,7 +367,9 @@ def main(args):
     max_accuracy = 0.0
     if args.model_ema and args.model_ema_eval:
         max_accuracy_ema = 0.0
-
+    
+    best_log_stats = None
+    
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
@@ -411,6 +413,8 @@ def main(args):
                         utils.save_model(
                             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                             loss_scaler=loss_scaler, epoch="best", model_ema=model_ema)
+                    if log_stats is not None:
+                        best_log_stats = log_stats.copy()
                 print(f'Max auc: {max_accuracy:.2f}%')
             
             elif args.main_eval == 'kappa':
@@ -455,7 +459,8 @@ def main(args):
             log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                          **{f'test_{k}': v for k, v in test_stats.items()},
                          'epoch': epoch,
-                         'n_parameters': n_parameters}
+                         'n_parameters': n_parameters,
+                         'max_accuracy' : max_accuracy}
 
             # repeat testing routines for EMA, if ema eval is turned on
             if args.model_ema and args.model_ema_eval:
@@ -536,7 +541,9 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-
+    if best_log_stats is not None:
+        with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
+            f.write(json.dumps({"best_test_stats": best_log_stats}) + "\n")
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('retinal dataset training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()

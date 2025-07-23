@@ -6,7 +6,6 @@ from dataloader.Apots import Apots
 from dataloader.RFMid import RFMiD
 from dataloader.Rsnr import RSNR
 from dataloader.MICCAI import MICCAI
-from dataloader.UWF4DR import UWF4DR
 from dataloader.EyeQ import EyeQ
 from timm.data.constants import \
     IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
@@ -97,9 +96,9 @@ def build_dataset(is_train, args):
 
     elif args.data_set == 'MICCAI':
         if is_train:
-            dataset = MICCAI(image_dir='/scratch/xinli38/data/MICCAI/Training',label_dir=args.fold_train,transform=transform)
+            dataset = MICCAI(image_dir=args.data_path,label_dir=args.fold_train,transform=transform)
         else:
-            dataset = MICCAI(image_dir='/scratch/xinli38/data/MICCAI/Validation',label_dir=args.fold_test,transform=transform)
+            dataset = MICCAI(image_dir=args.data_path,label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes
 
     else:
@@ -107,7 +106,6 @@ def build_dataset(is_train, args):
     print("Number of the class = %d" % nb_classes)
 
     return dataset, nb_classes
-
 
 def build_transform(is_train, args):
     resize_im = args.input_size > 32
@@ -158,33 +156,19 @@ def build_transform(is_train, args):
         
     else:
         if is_train:
-            if args.data_set == "EyeQ":
-                transform = create_transform(
-                    input_size=args.input_size,
-                    is_training=True,
-                    color_jitter=args.color_jitter,
-                    auto_augment=args.aa,
-                    interpolation=args.train_interpolation,
-                    re_prob=args.reprob,
-                    re_mode=args.remode,
-                    re_count=args.recount,
-                    mean=mean,
-                    std=std,
-                ) 
-            else:
             # this should always dispatch to transforms_imagenet_train
-                transform = create_transform(
-                    input_size=args.input_size,
-                    is_training=True,
-                    color_jitter=args.color_jitter,
-                    auto_augment=args.aa,
-                    interpolation=args.train_interpolation,
-                    re_prob=args.reprob,
-                    re_mode=args.remode,
-                    re_count=args.recount,
-                    mean=mean,
-                    std=std,
-                )
+            transform = create_transform(
+                input_size=args.input_size,
+                is_training=True,
+                color_jitter=args.color_jitter,
+                auto_augment=args.aa,
+                interpolation=args.train_interpolation,
+                re_prob=args.reprob,
+                re_mode=args.remode,
+                re_count=args.recount,
+                mean=mean,
+                std=std,
+            )
             if not resize_im:
                 transform.transforms[0] = transforms.RandomCrop(
                     args.input_size, padding=4)
@@ -210,8 +194,5 @@ def build_transform(is_train, args):
                 t.append(transforms.CenterCrop(args.input_size))
 
         t.append(transforms.ToTensor())
-        # t.append(transforms.Normalize(mean, std))
-        # t.append(transforms.Normalize([0.425753653049469, 0.29737451672554016, 0.21293757855892181], [0.27670302987098694, 0.20240527391433716, 0.1686241775751114]))
-        # t.append(transforms.Normalize([0.19887063, 0.17985054, 0.00337053], [0.13506763, 0.13922244, 0.00623432]))
-
+        t.append(transforms.Normalize(mean, std))
         return transforms.Compose(t)
