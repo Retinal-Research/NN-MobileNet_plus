@@ -25,6 +25,7 @@ from model.resnext import ReXNetV1
 from model.rexnetv2 import ReXNetV2
 
 from utils import NativeScalerWithGradNormCount as NativeScaler
+from utils import EarlyStopping
 import utils
 
 
@@ -279,9 +280,11 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    model.load_state_dict(torch.load('rexnetv1_1.0.pth'),strict=False)
+    model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/rexnetv1_1.0.pth'),strict=False)
 
-    # model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/baseline/MICCAI_lr2e-4_drop0.2_mix0.4_cut0.8_optadamp/checkpoint-best.pth', weights_only=False)['model'],strict=True)
+
+    # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
 
     model.to(device)
 
@@ -370,6 +373,8 @@ def main(args):
     
     best_log_stats = None
     log_stats = None
+    early_stopping = EarlyStopping(patience=10)
+
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
@@ -414,7 +419,11 @@ def main(args):
                             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                             loss_scaler=loss_scaler, epoch="best", model_ema=model_ema)
                     if log_stats is not None:
-                        best_log_stats = test_stats["auc"].copy()
+                        best_log_stats = test_stats.copy()
+
+                if early_stopping.step(test_stats["auc"]):
+                    print(f"\n[Early Stop] No AUC improvement for {early_stopper.patience} epochs. Best AUC: {early_stopper.best_score:.4f}\n")
+                    break
                 print(f'Max auc: {max_accuracy:.2f}%')
             
             elif args.main_eval == 'kappa':
