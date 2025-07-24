@@ -279,9 +279,9 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     model = ReXNetV1(width_mult=3.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
+    # model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
 
-    model.load_state_dict(torch.load('Experiment/EyeQ_ALL/checkpoint-best.pth')['model'],strict=True, weights_only=False)
+    model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/baseline/MICCAI_lr2e-4_drop0.2_mix0.4_cut0.8_optadamp/checkpoint-best.pth', weights_only=False)['model'],strict=True)
 
     model.to(device)
 
