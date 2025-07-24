@@ -282,7 +282,9 @@ def main(args):
     model = ReXNetV1(width_mult=3.0,classes=args.nb_classes,dropout_path=args.drop_path)
     model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
 
-    # model.load_state_dict(torch.load('Experiment/EyeQ_ALL/checkpoint-best.pth')['model'],strict=True)
+
+    # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
 
     model.to(device)
 
