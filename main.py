@@ -279,8 +279,8 @@ def main(args):
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
-    model = ReXNetV1(width_mult=3.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    model.load_state_dict(torch.load('rexnet_3.0.pth'),strict=False)
+    model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
+    model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/rexnetv1_1.0.pth'),strict=False)
 
 
     # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
@@ -421,7 +421,7 @@ def main(args):
                     if log_stats is not None:
                         best_log_stats = test_stats.copy()
 
-                if early_stopper.step(test_stats["auc"]):
+                if early_stopping.step(test_stats["auc"]):
                     print(f"\n[Early Stop] No AUC improvement for {early_stopper.patience} epochs. Best AUC: {early_stopper.best_score:.4f}\n")
                     break
                 print(f'Max auc: {max_accuracy:.2f}%')
