@@ -19,6 +19,7 @@ DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 LR_LIST=("1e-3" "1e-3" "1e-3")
 DROP_PATH_LIST=("0.1" "0.1" "0.1")
 
+
 MIXUP_LIST=("0.0" "0.2" "0.4")
 CUTMIX_LIST=("1.0" "0.8" "0.6")
 

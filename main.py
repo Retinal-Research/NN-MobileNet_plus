@@ -422,7 +422,7 @@ def main(args):
                         best_log_stats = test_stats.copy()
 
                 if early_stopping.step(test_stats["auc"]):
-                    print(f"\n[Early Stop] No AUC improvement for {early_stopper.patience} epochs. Best AUC: {early_stopper.best_score:.4f}\n")
+                    print(f"\n[Early Stop] No AUC improvement for {early_stopping.patience} epochs. Best AUC: {early_stopping.best_score:.4f}\n")
                     break
                 print(f'Max auc: {max_accuracy:.2f}%')
             
