@@ -16,11 +16,11 @@ TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classif
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
 # === Swept Parameters ===
-LR_LIST=("1e-3" "1e-3" "1e-3")
+LR_LIST=("5e-4" "5e-4" "5e-4")
 DROP_PATH_LIST=("0.05" "0.1" "0.15")
 
-MIXUP_LIST=("0.0" "0.1" "0.2")
-CUTMIX_LIST=("1.0" "0.9" "0.8")
+MIXUP_LIST=("0.0" "0.2" "0.4")
+CUTMIX_LIST=("1.0" "0.8" "0.6")
 
 # === Loop ===
 for i in {0..2}; do
