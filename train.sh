@@ -5,21 +5,22 @@ BATCH_SIZE=32
 INPUT_SIZE=224
 DATASET="MICCAI"
 WEIGHT_DECAY=1e-4
-EPOCHS=200
+EPOCHS=120
 MAIN_EVAL="auc"
 OPT="adamp"
 NB_CLASSES=5
+EXP_TYPE="baseline"
 
 TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
 TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
 # === Swept Parameters ===
-LR_LIST=("1e-4" "2e-4" "1e-3")
-DROP_PATH_LIST=("0.15" "0.2" "0.25")
+LR_LIST=("1e-3" "1e-3" "1e-3")
+DROP_PATH_LIST=("0.05" "0.1" "0.15")
 
-MIXUP_LIST=("0.0" "0.4" "0.6")
-CUTMIX_LIST=("1.0" "0.8" "0.6")
+MIXUP_LIST=("0.0" "0.1" "0.2")
+CUTMIX_LIST=("1.0" "0.9" "0.8")
 
 # === Loop ===
 for i in {0..2}; do
@@ -28,9 +29,8 @@ for i in {0..2}; do
   MIXUP=${MIXUP_LIST[$i]}
   CUTMIX=${CUTMIX_LIST[$i]}
 
-  # Construct experiment name
   EXP_NAME="${DATASET}_lr${LR}_drop${DROP_PATH}_mix${MIXUP}_cut${CUTMIX}_opt${OPT}"
-  OUTPUT_DIR="/scratch/xinli38/nn-mobilenet++/Experiment/baseline/$EXP_NAME"
+  OUTPUT_DIR="/scratch/xinli38/nn-mobilenet++/Experiment/1_0/$EXP_TYPE/$EXP_NAME"
   LOG_DIR="$OUTPUT_DIR"
 
   echo "🚀 Starting run $((i+1))/3: LR=$LR, DropPath=$DROP_PATH, Mixup=$MIXUP, CutMix=$CUTMIX"
