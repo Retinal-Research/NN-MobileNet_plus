@@ -7,6 +7,8 @@ from dataloader.RFMid import RFMiD
 from dataloader.Rsnr import RSNR
 from dataloader.MICCAI import MICCAI
 from dataloader.EyeQ import EyeQ
+from dataloader.IDRID import IDRID
+
 from timm.data.constants import \
     IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
 from timm.data import create_transform
@@ -85,7 +87,14 @@ def build_dataset(is_train, args):
         else:
             dataset = EyeQ(image_dir='/media/xinli38/T7 Touch/EyePACS/Contextual_unpaired_2', label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes
-        
+
+    elif args.data_set == 'idrid':
+        if is_train:
+            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/train',label_dir=args.fold_train,transform=transform)
+        else:
+            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/test', label_dir=args.fold_test,transform=transform)
+        nb_classes = args.nb_classes   
+
     elif args.data_set == 'rsna':
         if is_train:
             dataset = RSNR(image_dir='dataset/APOTS/crop',label_dir='dataset/APOTS/train_1.csv',transform=transform)

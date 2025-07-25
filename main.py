@@ -145,7 +145,7 @@ def get_args_parser():
     parser.add_argument('--nb_classes', default=5, type=int,
                         help='number of the classification types')
     parser.add_argument('--imagenet_default_mean_and_std', type=str2bool, default=False)
-    parser.add_argument('--data_set', default='UWF4DR', choices=['EyePacs','messidor1', 'messidor2','rfmid','apots','rsna','MICCAI', 'UWF4DR', 'EyeQ'],
+    parser.add_argument('--data_set', default='UWF4DR', choices=['EyePacs','messidor1', 'messidor2','rfmid','apots','rsna','MICCAI', 'UWF4DR', 'EyeQ', 'idrid'],
                         type=str, help='ImageNet dataset path')
     parser.add_argument('--output_dir', default='Experiment/Messidor',
                         help='path where to save, empty for no saving')
