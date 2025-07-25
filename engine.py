@@ -249,7 +249,7 @@ def evaluate(data_loader, model, device, use_amp=False):
     #       spec=metric_logger.spec, ppv=metric_logger.ppv, npv=metric_logger.ppv
     #       ))
     
-    print(' Accuracy:{accuracy_score.global_avg:.4f}==============  SENSI:{sen.global_avg:.4f}===========   kappa:{kappa.global_avg:.4f} ============= F1:{f1.global_avg:.4f} ============== Loss:{loss.global_avg:.4f} \============== AUC:{auc.global_avg:.4f} '
+    print(' Accuracy:{accuracy_score.global_avg:.4f}==============  SENSI:{sen.global_avg:.4f}===========   kappa:{kappa.global_avg:.4f} ============= F1:{f1.global_avg:.4f} ============== Loss:{loss.global_avg:.4f} ============== AUC:{auc.global_avg:.4f} '
         .format(accuracy_score=metric_logger.accuracy_score, sen=metric_logger.sen, 
         kappa=metric_logger.kappa, f1=metric_logger.f1, loss=metric_logger.loss, auc=metric_logger.auc,
         ))

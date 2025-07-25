@@ -7,7 +7,7 @@ MIT license
 import torch
 import torch.nn as nn
 from math import ceil
-from model.S3_DSConv_pro import DSConv_pro
+from S3_DSConv_pro import DSConv_pro
 # Memory-efficient Siwsh using torch.jit.script borrowed from the code in (https://twitter.com/jeremyphoward/status/1188251041835315200)
 # Currently use memory-efficient SiLU as default:
 USE_MEMORY_EFFICIENT_SiLU = True
@@ -106,7 +106,7 @@ class SE(nn.Module):
 
 
 class LinearBottleneck(nn.Module):
-    def __init__(self, in_channels, channels, t, stride, use_se=True, se_ratio=12,dropout = 0.0,
+    def __init__(self, in_channels, channels, t, stride, use_se=True, use_dsc = False, se_ratio=12,dropout = 0.0,
                  **kwargs):
         super(LinearBottleneck, self).__init__(**kwargs)
         self.use_shortcut = stride == 1 and in_channels <= channels
@@ -119,11 +119,13 @@ class LinearBottleneck(nn.Module):
             ConvBNSiLU(out, in_channels=in_channels, channels=dw_channels)
         else:
             dw_channels = in_channels
-        if stride == 2:
-            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
+
+        if stride == 2 and use_dsc:
+            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=1)
         else :
             ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
                       num_group=dw_channels, active=False)
+        
         if use_se:
             out.append(SE(dw_channels, dw_channels, se_ratio))
 
@@ -168,7 +170,7 @@ class ReXNetV1(nn.Module):
         features = []
         in_channels_group = []
         channels_group = []
-
+        
         # The following channel configuration is a simple instance to make each layer become an expand layer.
         for i in range(self.depth // 3):
             if i == 0:
@@ -180,14 +182,21 @@ class ReXNetV1(nn.Module):
                 channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
-
+        print("==== Layer Configuration Debug ====")
+        print(f"layers:         {layers} (total blocks: {sum(layers)})")
+        print(f"in_channels_group ({len(in_channels_group)}): {in_channels_group}")
+        print(f"channels_group     ({len(channels_group)}): {channels_group}")
+        print(f"ts                ({len(ts)}): {ts}")
+        print(f"strides           ({len(strides)}): {strides}")
+        print(f"use_ses           ({len(use_ses)}): {use_ses}")
+        print("====================================")
         for block_idx, (in_c, c, t, s, se) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_ses)):
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
                                              t=t,
                                              stride=s,
-                                             use_se=se, se_ratio=se_ratio, dropout = dropout_path))
-
+                                             use_se=se, se_ratio=se_ratio, dropout = dropout_path, use_dsc=True if block_idx >= 5 else False))
+            # print(f"block_idx={block_idx}, stride={s}, use_dsc={block_idx >= 6 and s==2}")
         pen_channels = int(1280 * width_mult)
         ConvBNSiLU(features, c, pen_channels)
 
