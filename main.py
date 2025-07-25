@@ -373,7 +373,7 @@ def main(args):
     
     best_log_stats = None
     log_stats = None
-    early_stopping = EarlyStopping(patience=15)
+    early_stopping = EarlyStopping(patience=20)
 
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()

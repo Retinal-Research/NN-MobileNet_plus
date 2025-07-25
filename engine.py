@@ -220,8 +220,8 @@ def evaluate(data_loader, model, device, use_amp=False):
     #thresh  = np.linspace(0, 1, 50)
     #f1score = get_f1score(preds, gts, thresh)
     
-    # f1score = metrics.f1_score(gts, preds, average='micro')
-    f1score = metrics.f1_score(gts, preds,average='weighted')
+    f1score = metrics.f1_score(gts, preds, average='micro')
+    # f1score = metrics.f1_score(gts, preds,average='weighted')
 
     # tn, fp, fn, tp = metrics.confusion_matrix(gts, preds).ravel()
     # spec = tn / (tn + fp)

@@ -17,7 +17,7 @@ class IDRID(Dataset):
         print(data)
     def __getitem__(self, idx):
         #print(self.image_all[idx])
-        image_name = str(self.image_all[idx]) #+ '.png'
+        image_name = str(self.image_all[idx]) + '.png'
         #print(self.data.iloc[idx, 0])
         label = self.label_all[idx]
 

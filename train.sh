@@ -3,29 +3,33 @@
 # === Fixed Config ===
 BATCH_SIZE=16
 INPUT_SIZE=224
-DATASET="MICCAI"
+DATASET="idrid"
 WEIGHT_DECAY=1e-5
 EPOCHS=120
 MAIN_EVAL="auc"
 OPT="adamp"
 NB_CLASSES=5
-EXP_TYPE=dsc_y
+EXP_TYPE=dsc_x
 
-TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
-TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
+# TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
+# TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
+TRAIN_CSV="/scratch/xinli38/data/IDRID/train.csv"
+TEST_CSV="/scratch/xinli38/data/IDRID/test.csv"
+
+
 # === Swept Parameters ===
-LR_LIST=("1e-3" "2e-3" "3e-3" "4e-3" "1e-3" "2e-3" "3e-3" "4e-3")
-DROP_PATH_LIST=("0.05" "0.05" "0.05" "0.1" "0.1" "0.1")
+LR_LIST=("1e-3" "3e-3" "5e-3" "7e-3" "2e-3" "4e-3" "6e-3" "8e-3")
+DROP_PATH_LIST=("0.05" "0.05" "0.05" "0.05" "0.05" "0.05" "0.05" "0.05")
 
 
-MIXUP_LIST=("0.4" "0.4" "0.4" "0.2" "0.2" "0.2")
-CUTMIX_LIST=("1.0" "1.0" "1.0" "1.0" "1.0" "1.0")
+MIXUP_LIST=("0.4" "0.4" "0.4" "0.4" "0.4" "0.4" "0.4" "0.4")
+CUTMIX_LIST=("1.0" "1.0" "1.0" "1.0" "1.0" "1.0" "1.0" "1.0")
 
 
 # === Loop ===
-for i in {3..5}; do
+for i in {0..7}; do
   LR=${LR_LIST[$i]}
   DROP_PATH=${DROP_PATH_LIST[$i]}
   MIXUP=${MIXUP_LIST[$i]}

@@ -7,7 +7,7 @@ MIT license
 import torch
 import torch.nn as nn
 from math import ceil
-from S3_DSConv_pro import DSConv_pro
+from model.S3_DSConv_pro import DSConv_pro
 # Memory-efficient Siwsh using torch.jit.script borrowed from the code in (https://twitter.com/jeremyphoward/status/1188251041835315200)
 # Currently use memory-efficient SiLU as default:
 USE_MEMORY_EFFICIENT_SiLU = True
@@ -121,7 +121,7 @@ class LinearBottleneck(nn.Module):
             dw_channels = in_channels
 
         if stride == 2 and use_dsc:
-            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=1)
+            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
         else :
             ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
                       num_group=dw_channels, active=False)
@@ -182,14 +182,14 @@ class ReXNetV1(nn.Module):
                 channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
-        print("==== Layer Configuration Debug ====")
-        print(f"layers:         {layers} (total blocks: {sum(layers)})")
-        print(f"in_channels_group ({len(in_channels_group)}): {in_channels_group}")
-        print(f"channels_group     ({len(channels_group)}): {channels_group}")
-        print(f"ts                ({len(ts)}): {ts}")
-        print(f"strides           ({len(strides)}): {strides}")
-        print(f"use_ses           ({len(use_ses)}): {use_ses}")
-        print("====================================")
+        # print("==== Layer Configuration Debug ====")
+        # print(f"layers:         {layers} (total blocks: {sum(layers)})")
+        # print(f"in_channels_group ({len(in_channels_group)}): {in_channels_group}")
+        # print(f"channels_group     ({len(channels_group)}): {channels_group}")
+        # print(f"ts                ({len(ts)}): {ts}")
+        # print(f"strides           ({len(strides)}): {strides}")
+        # print(f"use_ses           ({len(use_ses)}): {use_ses}")
+        # print("====================================")
         for block_idx, (in_c, c, t, s, se) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_ses)):
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
@@ -216,6 +216,6 @@ class ReXNetV1(nn.Module):
         x = self.out(x).flatten(1)
         return x
 
-model = ReXNetV1(width_mult=3.0,classes=5,dropout_path=0.2)
+# model = ReXNetV1(width_mult=3.0,classes=5,dropout_path=0.2)
 
-print(model)
+# print(model)
