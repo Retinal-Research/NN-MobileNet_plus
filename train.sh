@@ -3,61 +3,53 @@
 # === Fixed Config ===
 BATCH_SIZE=16
 INPUT_SIZE=224
-DATASET="idrid"
+DATASET="MICCAI"
 WEIGHT_DECAY=1e-5
-EPOCHS=120
+EPOCHS=500
 MAIN_EVAL="auc"
-OPT="adamp"
 NB_CLASSES=5
-EXP_TYPE=dsc_x
+EXP_TYPE="dsc+attn"
 
-# TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
-# TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
+TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
+TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
-TRAIN_CSV="/scratch/xinli38/data/IDRID/train.csv"
-TEST_CSV="/scratch/xinli38/data/IDRID/test.csv"
-
-
 # === Swept Parameters ===
-LR_LIST=("1e-3" "3e-3" "5e-3" "7e-3" "2e-3" "4e-3" "6e-3" "8e-3")
-DROP_PATH_LIST=("0.05" "0.05" "0.05" "0.05" "0.05" "0.05" "0.05" "0.05")
+OPT_LIST=("radam" "adamp")
+LR_LIST=("1e-4" "2e-4" "5e-4" "8e-4")
+DROP_PATH="0.05"
+MIXUP="0.4"
+CUTMIX="1.0"
 
+# === Nested Loop ===
+for OPT in "${OPT_LIST[@]}"; do
+  for LR in "${LR_LIST[@]}"; do
 
-MIXUP_LIST=("0.4" "0.4" "0.4" "0.4" "0.4" "0.4" "0.4" "0.4")
-CUTMIX_LIST=("1.0" "1.0" "1.0" "1.0" "1.0" "1.0" "1.0" "1.0")
+    # Construct experiment name
+    EXP_NAME="${DATASET}_lr${LR}_drop${DROP_PATH}_mix${MIXUP}_cut${CUTMIX}_opt${OPT}"
+    OUTPUT_DIR="/scratch/xinli38/nn-mobilenet++/Experiment/1_0/$EXP_TYPE/$EXP_NAME"
+    LOG_DIR="$OUTPUT_DIR"
 
+    echo "🚀 Starting: OPT=$OPT, LR=$LR"
 
-# === Loop ===
-for i in {0..7}; do
-  LR=${LR_LIST[$i]}
-  DROP_PATH=${DROP_PATH_LIST[$i]}
-  MIXUP=${MIXUP_LIST[$i]}
-  CUTMIX=${CUTMIX_LIST[$i]}
+    python main.py \
+      --data_path $DATA_PATH \
+      --batch_size $BATCH_SIZE \
+      --lr $LR \
+      --input_size $INPUT_SIZE \
+      --data_set $DATASET \
+      --drop_path $DROP_PATH \
+      --weight_decay $WEIGHT_DECAY \
+      --epochs $EPOCHS \
+      --main_eval $MAIN_EVAL \
+      --opt $OPT \
+      --nb_classes $NB_CLASSES \
+      --mixup $MIXUP \
+      --cutmix $CUTMIX \
+      --output_dir $OUTPUT_DIR \
+      --log_dir $LOG_DIR \
+      --fold_train $TRAIN_CSV \
+      --fold_test $TEST_CSV
 
-  # Construct experiment name
-  EXP_NAME="${DATASET}_lr${LR}_drop${DROP_PATH}_mix${MIXUP}_cut${CUTMIX}_opt${OPT}"
-  OUTPUT_DIR="/scratch/xinli38/nn-mobilenet++/Experiment/1_0/$EXP_TYPE/$EXP_NAME"
-  LOG_DIR="$OUTPUT_DIR"
-
-  echo "🚀 Starting run $((i+1))/6: LR=$LR, DropPath=$DROP_PATH, Mixup=$MIXUP, CutMix=$CUTMIX"
-
-  python main.py \
-    --data_path $DATA_PATH \
-    --batch_size $BATCH_SIZE \
-    --lr $LR \
-    --input_size $INPUT_SIZE \
-    --data_set $DATASET \
-    --drop_path $DROP_PATH \
-    --weight_decay $WEIGHT_DECAY \
-    --epochs $EPOCHS \
-    --main_eval $MAIN_EVAL \
-    --opt $OPT \
-    --nb_classes $NB_CLASSES \
-    --mixup $MIXUP \
-    --cutmix $CUTMIX \
-    --output_dir $OUTPUT_DIR \
-    --log_dir $LOG_DIR \
-    --fold_train $TRAIN_CSV \
-    --fold_test $TEST_CSV
+  done
 done

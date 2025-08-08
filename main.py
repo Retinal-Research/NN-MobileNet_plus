@@ -280,7 +280,7 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    model.load_state_dict(torch.load('rexnetv1_1.0.pth'),strict=False)
+    # model.load_state_dict(torch.load('rexnetv1_1.0.pth'),strict=False)
 
 
     # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
@@ -373,7 +373,7 @@ def main(args):
     
     best_log_stats = None
     log_stats = None
-    early_stopping = EarlyStopping(patience=20)
+    early_stopping = EarlyStopping(patience=50)
 
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()

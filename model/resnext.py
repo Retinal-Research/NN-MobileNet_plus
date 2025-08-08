@@ -8,8 +8,8 @@ import torch
 import torch.nn as nn
 from math import ceil
 from model.S3_DSConv_pro import DSConv_pro
-# Memory-efficient Siwsh using torch.jit.script borrowed from the code in (https://twitter.com/jeremyphoward/status/1188251041835315200)
-# Currently use memory-efficient SiLU as default:
+from model.vit_block import MobileViTBlock
+
 USE_MEMORY_EFFICIENT_SiLU = True
 
 if USE_MEMORY_EFFICIENT_SiLU:
@@ -87,26 +87,9 @@ def ConvBNSiLU(out, in_channels, channels, kernel=1, stride=1, pad=0, num_group=
     out.append(SiLU(inplace=True))
 
 
-class SE(nn.Module):
-    def __init__(self, in_channels, channels, se_ratio=12):
-        super(SE, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Sequential(
-            nn.Conv2d(in_channels, channels // se_ratio, kernel_size=1, padding=0),
-            nn.BatchNorm2d(channels // se_ratio),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(channels // se_ratio, channels, kernel_size=1, padding=0),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        y = self.avg_pool(x)
-        y = self.fc(y)
-        return x * y
-
 
 class LinearBottleneck(nn.Module):
-    def __init__(self, in_channels, channels, t, stride, use_se=True, use_dsc = False, se_ratio=12,dropout = 0.0,
+    def __init__(self, in_channels, channels, t, stride, dim, use_vit=False, use_dsc = False, se_ratio=12, dropout = 0.0, L=2,
                  **kwargs):
         super(LinearBottleneck, self).__init__(**kwargs)
         self.use_shortcut = stride == 1 and in_channels <= channels
@@ -114,6 +97,7 @@ class LinearBottleneck(nn.Module):
         self.out_channels = channels
         self.drop = nn.Dropout2d(dropout)
         out = []
+
         if t != 1:
             dw_channels = in_channels * t
             ConvBNSiLU(out, in_channels=in_channels, channels=dw_channels)
@@ -124,13 +108,15 @@ class LinearBottleneck(nn.Module):
             DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
         else :
             ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
-                      num_group=dw_channels, active=False)
-        
-        if use_se:
-            out.append(SE(dw_channels, dw_channels, se_ratio))
+                    num_group=dw_channels, active=False)
+
 
         out.append(nn.ReLU6())
         ConvBNAct(out, in_channels=dw_channels, channels=channels, active=False, relu6=True)
+        
+        if use_vit:
+            out.append(MobileViTBlock(dim, L, channels, 3, (2,2), int(dim * 2)))
+
         self.out = nn.Sequential(*out)
 
     def forward(self, x):
@@ -150,55 +136,73 @@ class ReXNetV1(nn.Module):
                  bn_momentum=0.9):
         super(ReXNetV1, self).__init__()
 
-        layers = [1, 2, 2, 3, 3, 5]
-        strides = [1, 2, 2, 2, 1, 2]
-        use_ses = [False, False, True, True, True, True]
+        # layers = [1, 2, 2, 3, 3, 5]
+        # strides = [1, 2, 2, 2, 1, 2]
+        layers = [1, 2, 2, 1, 1]
+        strides = [1, 2, 2, 2, 2]
 
+        dim = [
+            0,        # stage 0: 1 block
+            0, 0,     # stage 1: 2 blocks
+            0, 180,   # stage 2: 2 blocks
+            216,         # stage 3: 1 block
+            256          # stage 4: 1 block
+        ]
+
+        L  = [
+            0,        # stage 0: 1 block
+            0, 0, # stage 1: 2 blocks
+            0, 2,   # stage 2: 2 blocks
+            4,         # stage 3: 1 block
+            3          # stage 4: 1 block
+        ]
+
+                # use_ses = [False, False, True, True, True, True]
+        use_vit_blocks = [
+            False,        # stage 0: 1 block
+            False, False, # stage 1: 2 blocks
+            False, True,   # stage 2: 2 blocks
+            True,         # stage 3: 1 block
+            True          # stage 4: 1 block
+        ]
         layers = [ceil(element * depth_mult) for element in layers]
         strides = sum([[element] + [1] * (layers[idx] - 1)
                        for idx, element in enumerate(strides)], [])
-        if use_se:
-            use_ses = sum([[element] * layers[idx] for idx, element in enumerate(use_ses)], [])
-        else:
-            use_ses = [False] * sum(layers[:])
+
+            
         ts = [1] * layers[0] + [6] * sum(layers[1:])
 
-        self.depth = sum(layers[:]) * 3
+        self.depth = sum(layers[:])
         stem_channel = 32 / width_mult if width_mult < 1.0 else 32
         inplanes = input_ch / width_mult if width_mult < 1.0 else input_ch
 
         features = []
         in_channels_group = []
         channels_group = []
-        
         # The following channel configuration is a simple instance to make each layer become an expand layer.
-        for i in range(self.depth // 3):
+        for i in range(self.depth):
             if i == 0:
                 in_channels_group.append(int(round(stem_channel * width_mult)))
                 channels_group.append(int(round(inplanes * width_mult)))
             else:
                 in_channels_group.append(int(round(inplanes * width_mult)))
-                inplanes += final_ch / (self.depth // 3 * 1.0)
+                inplanes += final_ch / (self.depth * 1.0)
                 channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
-        # print("==== Layer Configuration Debug ====")
-        # print(f"layers:         {layers} (total blocks: {sum(layers)})")
-        # print(f"in_channels_group ({len(in_channels_group)}): {in_channels_group}")
-        # print(f"channels_group     ({len(channels_group)}): {channels_group}")
-        # print(f"ts                ({len(ts)}): {ts}")
-        # print(f"strides           ({len(strides)}): {strides}")
-        # print(f"use_ses           ({len(use_ses)}): {use_ses}")
-        # print("====================================")
-        for block_idx, (in_c, c, t, s, se) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_ses)):
+        print(in_channels_group)
+        print(channels_group)
+        for block_idx, (in_c, c, t, s, vit, d, l) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_vit_blocks, dim, L)):
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
                                              t=t,
                                              stride=s,
-                                             use_se=se, se_ratio=se_ratio, dropout = dropout_path, use_dsc=True if block_idx >= 5 else False))
-            # print(f"block_idx={block_idx}, stride={s}, use_dsc={block_idx >= 6 and s==2}")
-        pen_channels = int(1280 * width_mult)
-        ConvBNSiLU(features, c, pen_channels)
+                                             dim= d,
+                                             L = l,
+                                             se_ratio=se_ratio, dropout = dropout_path, use_vit=vit, use_dsc=True if block_idx >= 5 else False))
+
+        # pen_channels = int(1280 * width_mult)
+        # ConvBNSiLU(features, c, pen_channels)
 
         features.append(nn.AdaptiveAvgPool2d(1))
         self.features = nn.Sequential(*features)
@@ -207,7 +211,7 @@ class ReXNetV1(nn.Module):
         #     nn.Conv2d(pen_channels, classes, 1, bias=True))
         self.out = nn.Sequential(
             nn.Dropout(dropout_ratio),
-            nn.Conv2d(pen_channels, classes, 1, bias=True))
+            nn.Conv2d(c, classes, 1, bias=True))
     def extract_features(self, x):
         return self.features[:-1](x)
     
@@ -216,6 +220,20 @@ class ReXNetV1(nn.Module):
         x = self.out(x).flatten(1)
         return x
 
-# model = ReXNetV1(width_mult=3.0,classes=5,dropout_path=0.2)
+# model = ReXNetV1(width_mult=1.0,classes=5,dropout_path=0.2)
+# if __name__ == '__main__':
+#     # 创建一个测试输入：模拟 1 张 RGB 图片，分辨率为 224x224
+#     dummy_input = torch.randn(2, 3, 224, 224).to('cuda')  # (B, C, H, W)
 
-# print(model)
+#     # 实例化模型
+#     model = ReXNetV1(width_mult=1.0, classes=5, dropout_path=0.2).to('cuda')
+
+#     # 输出模型结构（可选）
+#     print(model)
+
+#     # 前向传播
+#     output = model(dummy_input)
+
+#     # 输出结果 shape
+#     print("Input shape: ", dummy_input.shape)
+#     print("Output shape: ", output.shape)
