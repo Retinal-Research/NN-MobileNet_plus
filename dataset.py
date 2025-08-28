@@ -4,6 +4,7 @@ from dataloader.Eyepacs import Eyepacs
 from dataloader.Messidor import Messidor1Dataset,Messidor2Dataset
 from dataloader.Apots import Apots
 from dataloader.RFMid import RFMiD
+from dataloader.ODIR import ODIR
 from dataloader.Rsnr import RSNR
 from dataloader.MICCAI import MICCAI
 from dataloader.EyeQ import EyeQ
@@ -70,15 +71,15 @@ def build_dataset(is_train, args):
         nb_classes = args.nb_classes
     elif args.data_set == 'rfmid':
         if is_train:
-            dataset = RFMiD(image_dir='dataset/RFMID/resize/trainset',label_dir='dataset/RFMID/train.csv',transform=transform)
+            dataset = RFMiD(image_dir='/scratch/xinli38/data/RFMiD/train',label_dir=args.fold_train,transform=transform)
         else:
-            dataset = RFMiD(image_dir='dataset/RFMID/resize/testset',label_dir='dataset/RFMID/test.csv',transform=transform)
+            dataset = RFMiD(image_dir='/scratch/xinli38/data/RFMiD/test',label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes
     elif args.data_set == 'apots':
         if is_train:
-            dataset = Apots(image_dir='dataset/APOTS/crop',label_dir='dataset/APOTS/train_1.csv',transform=transform)
+            dataset = Apots(image_dir='/scratch/xinli38/data/APTOS/images',label_dir=args.fold_train,transform=transform)
         else:
-            dataset = Apots(image_dir='dataset/APOTS/crop',label_dir='dataset/APOTS/test_1.csv',transform=transform)
+            dataset = Apots(image_dir='/scratch/xinli38/data/APTOS/images',label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes
 
     elif args.data_set == 'EyeQ':
@@ -90,9 +91,9 @@ def build_dataset(is_train, args):
 
     elif args.data_set == 'idrid':
         if is_train:
-            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/train',label_dir=args.fold_train,transform=transform)
+            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/train_256',label_dir=args.fold_train,transform=transform)
         else:
-            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/test', label_dir=args.fold_test,transform=transform)
+            dataset = IDRID(image_dir='/scratch/xinli38/data/IDRID/image/test_256', label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes   
 
     elif args.data_set == 'rsna':
@@ -110,6 +111,13 @@ def build_dataset(is_train, args):
             dataset = MICCAI(image_dir=args.data_path,label_dir=args.fold_test,transform=transform)
         nb_classes = args.nb_classes
 
+    elif args.data_set == 'odir':
+        if is_train:
+            dataset = ODIR(image_dir="/scratch/xinli38/data/ODIR/images",label_dir=args.fold_train,transform=transform)
+        else:
+            dataset = ODIR(image_dir="/scratch/xinli38/data/ODIR/images",label_dir=args.fold_test,transform=transform)
+        nb_classes = args.nb_classes
+
     else:
         raise NotImplementedError()
     print("Number of the class = %d" % nb_classes)
@@ -123,32 +131,66 @@ def build_transform(is_train, args):
     mean = IMAGENET_INCEPTION_MEAN if not imagenet_default_mean_and_std else IMAGENET_DEFAULT_MEAN
     std = IMAGENET_INCEPTION_STD if not imagenet_default_mean_and_std else IMAGENET_DEFAULT_STD
 
-    if args.data_set == "MICCAI":
-        
+    if args.data_set == "MICCAI" or args.data_set == "idrid":
         if is_train:
-            
-            return transforms.Compose([
-                transforms.RandomResizedCrop(input_size, scale=(0.08, 1.0), ratio=(0.75, 1.3333),interpolation=transforms.InterpolationMode.BICUBIC),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-                #T.RandomApply([T.AutoAugment(policy=T.AutoAugmentPolicy.IMAGENET)],p=0.3),
-                transforms.RandomRotation(degrees=[-180, 180],
-                                fill=0,interpolation=transforms.InterpolationMode.BICUBIC),
-                #transforms.RandomAffine(degrees=0, translate=[0.15, 0.15], fill=0,interpolation=transforms.InterpolationMode.BICUBIC),
-                #T.RandomGrayscale(p=0.2),
-                transforms.ColorJitter(brightness=0.4,
-                                contrast=0.4,
-                                saturation=0.4,
-                                hue=0.4
-                                ),
-                #transforms.RandomApply([transforms.GaussianBlur(kernel_size=(7,13),sigma=(9,11))],p=0.5),
-                #transforms.RandomAutocontrast(p=0.3),
-                transforms.ToTensor(),
-                # messidor 
-                transforms.Normalize([0.425753653049469, 0.29737451672554016, 0.21293757855892181], [0.27670302987098694, 0.20240527391433716, 0.1686241775751114]),
-                #T.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5]),
-                transforms.RandomErasing(p=0.4)
+            if args.data_set == "no":
+                return transforms.Compose([
+                    transforms.RandomResizedCrop(
+                        input_size,
+                        scale=(0.9, 1.0),              # 不要太小，避免裁掉黄斑/视盘
+                        ratio=(0.95, 1.05),
+                        interpolation=transforms.InterpolationMode.BICUBIC
+                    ),
+                    transforms.RandomHorizontalFlip(p=0.5),
+                    transforms.RandomRotation(
+                        degrees=20,
+                        interpolation=transforms.InterpolationMode.BICUBIC,
+                        fill=0
+                    ),
+                    transforms.ColorJitter(
+                        brightness=0.15,
+                        contrast=0.15,
+                        saturation=0.10,
+                        hue=0.02
+                    ),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        [0.5, 0.5, 0.5],
+                        [0.5, 0.5, 0.5]
+                    ),
+                    transforms.RandomErasing(
+                        p=0.1,
+                        scale=(0.01, 0.05),
+                        ratio=(0.3, 3.3),
+                        value=0
+                    ),
                 ])
+
+            else:
+
+                return transforms.Compose([
+                    transforms.RandomResizedCrop(input_size, scale=(0.08, 1.0), ratio=(0.75, 1.3333),interpolation=transforms.InterpolationMode.BICUBIC),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomVerticalFlip(),
+                    #T.RandomApply([T.AutoAugment(policy=T.AutoAugmentPolicy.IMAGENET)],p=0.3),
+                    transforms.RandomRotation(degrees=[-180, 180],
+                                    fill=0,interpolation=transforms.InterpolationMode.BICUBIC),
+                    #transforms.RandomAffine(degrees=0, translate=[0.15, 0.15], fill=0,interpolation=transforms.InterpolationMode.BICUBIC),
+                    #T.RandomGrayscale(p=0.2),
+                    transforms.ColorJitter(brightness=0.4,
+                                    contrast=0.4,
+                                    saturation=0.4,
+                                    hue=0.4
+                                    ),
+                    #transforms.RandomApply([transforms.GaussianBlur(kernel_size=(7,13),sigma=(9,11))],p=0.5),
+                    #transforms.RandomAutocontrast(p=0.3),
+                    transforms.ToTensor(),
+                    # messidor 
+                    # transforms.Normalize([0.425753653049469, 0.29737451672554016, 0.21293757855892181], [0.27670302987098694, 0.20240527391433716, 0.1686241775751114]),
+                    transforms.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5]),
+                    # T.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5]),
+                    transforms.RandomErasing(p=0.4)
+                    ])
         else:
             args.crop_pct = 224 / 256
             size = int(args.input_size / args.crop_pct)
@@ -157,9 +199,9 @@ def build_transform(is_train, args):
                 transforms.Resize(size=size,interpolation=transforms.InterpolationMode.BICUBIC),
                 transforms.CenterCrop(args.input_size),
                 transforms.ToTensor(),
-                transforms.Normalize([0.425753653049469, 0.29737451672554016, 0.21293757855892181], [0.27670302987098694, 0.20240527391433716, 0.1686241775751114]),
-                #transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-                #T.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5]) 
+                # transforms.Normalize([0.425753653049469, 0.29737451672554016, 0.21293757855892181], [0.27670302987098694, 0.20240527391433716, 0.1686241775751114]),
+                # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+                transforms.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5])
         ])
         
         

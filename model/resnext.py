@@ -190,8 +190,7 @@ class ReXNetV1(nn.Module):
                 channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
-        print(in_channels_group)
-        print(channels_group)
+
         for block_idx, (in_c, c, t, s, vit, d, l) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_vit_blocks, dim, L)):
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
