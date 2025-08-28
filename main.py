@@ -145,7 +145,7 @@ def get_args_parser():
     parser.add_argument('--nb_classes', default=5, type=int,
                         help='number of the classification types')
     parser.add_argument('--imagenet_default_mean_and_std', type=str2bool, default=False)
-    parser.add_argument('--data_set', default='UWF4DR', choices=['EyePacs','messidor1', 'messidor2','rfmid','apots','rsna','MICCAI', 'UWF4DR', 'EyeQ', 'idrid'],
+    parser.add_argument('--data_set', default='UWF4DR',
                         type=str, help='ImageNet dataset path')
     parser.add_argument('--output_dir', default='Experiment/Messidor',
                         help='path where to save, empty for no saving')
@@ -286,7 +286,31 @@ def main(args):
     # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
     # model.load_state_dict(checkpoint,strict=True)
 
+
+    # 2) Load pretrained weights (already cleaned: only `features.*`, no `backbone.` prefix)
+    ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    model.load_state_dict(ckpt, strict=False)
     model.to(device)
+
+    # train_from = 7
+    # for name, p in model.named_parameters():
+    #     if name.startswith("features."):
+    #         stage_id = int(name.split(".")[1])  
+    #         if stage_id < train_from:
+    #             p.requires_grad = False
+    #         else:
+    #             p.requires_grad = True
+    #     else:
+    #         p.requires_grad = True
+
+    # 4) Build optimizer (only includes trainable parameters)
+    # (Optional) sanity check prints
+    # trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    # frozen    = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+    # print(f"Trainable params: {trainable} | Frozen params: {frozen}")
+    
+
+
 
     model_ema = None
     if args.model_ema:
@@ -353,7 +377,15 @@ def main(args):
     elif args.smoothing > 0.:
         criterion = LabelSmoothingCrossEntropy(smoothing=args.smoothing)
     else:
-        criterion = torch.nn.CrossEntropyLoss()
+        # num_pos = 1519
+        # num_neg = 401
+        # N = num_pos + num_neg
+        # w0 = N / (2*num_neg)
+        # w1 = N / (2*num_pos)
+        # class_weights = torch.tensor([w0, w1], dtype=torch.float, device=device)
+        # criterion = torch.nn.CrossEntropyLoss(weight=class_weights)  
+        criterion = torch.nn.CrossEntropyLoss()  
+
 
     print("criterion = %s" % str(criterion))
 
@@ -373,7 +405,8 @@ def main(args):
     
     best_log_stats = None
     log_stats = None
-    early_stopping = EarlyStopping(patience=10)
+
+    early_stopping = EarlyStopping(patience=100)
 
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()
@@ -409,6 +442,13 @@ def main(args):
                         utils.save_model(
                             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                             loss_scaler=loss_scaler, epoch="best", model_ema=model_ema)
+                    if log_stats is not None:
+                        best_log_stats = test_stats.copy()
+
+                if early_stopping.step(test_stats["auc"]):
+                    print(f"\n[Early Stop] No AUC improvement for {early_stopping.patience} epochs. Best AUC: {early_stopping.best_score:.4f}\n")
+                    break
+
                 print(f'Max f1: {max_accuracy:.2f}%')
 
             elif args.main_eval == 'auc':
