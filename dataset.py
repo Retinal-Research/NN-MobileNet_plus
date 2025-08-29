@@ -131,39 +131,21 @@ def build_transform(is_train, args):
     mean = IMAGENET_INCEPTION_MEAN if not imagenet_default_mean_and_std else IMAGENET_DEFAULT_MEAN
     std = IMAGENET_INCEPTION_STD if not imagenet_default_mean_and_std else IMAGENET_DEFAULT_STD
 
-    if args.data_set == "MICCAI" or args.data_set == "idrid":
+    if args.data_set == "MICCAI" or args.data_set == "odir":
         if is_train:
-            if args.data_set == "no":
+            if args.data_set == "odir":
                 return transforms.Compose([
-                    transforms.RandomResizedCrop(
-                        input_size,
-                        scale=(0.9, 1.0),              # 不要太小，避免裁掉黄斑/视盘
-                        ratio=(0.95, 1.05),
-                        interpolation=transforms.InterpolationMode.BICUBIC
-                    ),
                     transforms.RandomHorizontalFlip(p=0.5),
                     transforms.RandomRotation(
                         degrees=20,
                         interpolation=transforms.InterpolationMode.BICUBIC,
                         fill=0
                     ),
-                    transforms.ColorJitter(
-                        brightness=0.15,
-                        contrast=0.15,
-                        saturation=0.10,
-                        hue=0.02
-                    ),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         [0.5, 0.5, 0.5],
                         [0.5, 0.5, 0.5]
-                    ),
-                    transforms.RandomErasing(
-                        p=0.1,
-                        scale=(0.01, 0.05),
-                        ratio=(0.3, 3.3),
-                        value=0
-                    ),
+                    )
                 ])
 
             else:
