@@ -27,7 +27,7 @@ class ODIR(Dataset):
         if self.transform:
             x = self.transform(x)
 
-        label_onehot = np.zeros(2)
+        label_onehot = np.zeros(8)
         label_onehot[label] = 1
 
         return x, label_onehot,label

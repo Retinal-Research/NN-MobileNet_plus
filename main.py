@@ -280,7 +280,7 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
     model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/rexnetv1_1.0.pth'),strict=False)
+    # model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/rexnetv1_1.0.pth'),strict=False)
 
 
     # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
@@ -288,8 +288,8 @@ def main(args):
 
 
     # 2) Load pretrained weights (already cleaned: only `features.*`, no `backbone.` prefix)
-    ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
-    model.load_state_dict(ckpt, strict=False)
+    # ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    # model.load_state_dict(ckpt, strict=False)
     model.to(device)
 
     # train_from = 7
@@ -406,7 +406,7 @@ def main(args):
     best_log_stats = None
     log_stats = None
 
-    early_stopping = EarlyStopping(patience=100)
+    early_stopping = EarlyStopping(patience=60)
 
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()
