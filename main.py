@@ -17,7 +17,7 @@ from timm.models import create_model
 from timm.loss import LabelSmoothingCrossEntropy,SoftTargetCrossEntropy
 from timm.utils import ModelEma
 from optim_factory import create_optimizer, LayerDecayValueAssigner
-
+import timm
 
 from dataset import build_dataset
 from engine import train_one_epoch,evaluate
@@ -279,7 +279,12 @@ def main(args):
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
-    model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
+
+    # model = timm.create_model("swin_tiny_patch4_window7_224", pretrained=False, num_classes=args.nb_classes)
+
+    model = timm.create_model("inception_v3", pretrained=False, num_classes=args.nb_classes, aux_logits=False)
+
+    # model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
     # model.load_state_dict(torch.load('/scratch/xinli38/nn-mobilenet++/rexnetv1_1.0.pth'),strict=False)
 
 
