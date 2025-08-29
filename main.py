@@ -287,8 +287,8 @@ def main(args):
     # model.to(device)
 
     # 2) Load pretrained weights (already cleaned: only `features.*`, no `backbone.` prefix)
-    ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
-    model.load_state_dict(ckpt, strict=False)
+    # ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    # model.load_state_dict(ckpt, strict=False)
     model.to(device)
 
     # train_from = 7

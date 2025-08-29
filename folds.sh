@@ -5,31 +5,31 @@ BATCH_SIZE=32
 INPUT_SIZE=224
 DATASET="odir"
 WEIGHT_DECAY=1e-4
-EPOCHS=1000
+EPOCHS=600
 MAIN_EVAL="auc"
-NB_CLASSES=2
-EXP_TYPE="down_odir"
+NB_CLASSES=8
+EXP_TYPE="down_odir_multi"
 
 # 你的图像根目录
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
 # 5折CSV所在目录（里面应有 train1.csv…train5.csv 和 test1.csv…test5.csv）
-FOLDS_DIR="/scratch/xinli38/data/ODIR/5_folds"   
+FOLDS_DIR="/scratch/xinli38/data/ODIR/5-folds"   
 
 # ========= Swept Parameters =========
-OPT_LIST=("adamw")
-LR_LIST=("5e-4")
-DROP_PATH="0.05"
-MIXUP="0"
-CUTMIX="0"
+OPT_LIST=("adamp")
+LR_LIST=("1e-3")
+DROP_PATH="0.21"
+MIXUP="0.4"
+CUTMIX="1.0"
 
 # ========= Loops: optimizer × lr × folds =========
 for OPT in "${OPT_LIST[@]}"; do
   for LR in "${LR_LIST[@]}"; do
-    for FOLD in {1..5}; do
+    for FOLD in {0..2}; do
 
       TRAIN_CSV="${FOLDS_DIR}/train_fold${FOLD}.csv"
-      TEST_CSV="${FOLDS_DIR}/val_fold${FOLD}.csv"
+      TEST_CSV="${FOLDS_DIR}/test_fold${FOLD}.csv"
 
       if [[ ! -f "$TRAIN_CSV" ]] || [[ ! -f "$TEST_CSV" ]]; then
         echo "❌ Missing CSV for fold ${FOLD}: $TRAIN_CSV or $TEST_CSV"
@@ -60,7 +60,7 @@ for OPT in "${OPT_LIST[@]}"; do
         --log_dir "$LOG_DIR" \
         --fold_train "$TRAIN_CSV" \
         --fold_test "$TEST_CSV" \
-        --smoothing 0 
+        --smoothing 0.05 
 
     done
   done
