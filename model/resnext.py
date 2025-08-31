@@ -7,8 +7,8 @@ MIT license
 import torch
 import torch.nn as nn
 from math import ceil
-from model.S3_DSConv_pro import DSConv_pro
-from model.vit_block import MobileViTBlock
+from S3_DSConv_pro import DSConv_pro
+from vit_block import MobileViTBlock
 
 USE_MEMORY_EFFICIENT_SiLU = True
 
@@ -190,7 +190,8 @@ class ReXNetV1(nn.Module):
                 channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
-
+        print(in_channels_group)
+        print(channels_group)
         for block_idx, (in_c, c, t, s, vit, d, l) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_vit_blocks, dim, L)):
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
@@ -219,20 +220,33 @@ class ReXNetV1(nn.Module):
         x = self.out(x).flatten(1)
         return x
 
-# model = ReXNetV1(width_mult=1.0,classes=5,dropout_path=0.2)
-# if __name__ == '__main__':
-#     # 创建一个测试输入：模拟 1 张 RGB 图片，分辨率为 224x224
-#     dummy_input = torch.randn(2, 3, 224, 224).to('cuda')  # (B, C, H, W)
+import torch
 
-#     # 实例化模型
-#     model = ReXNetV1(width_mult=1.0, classes=5, dropout_path=0.2).to('cuda')
+def inspect_checkpoint(ckpt_path, topk=30):
+    """
+    打印 checkpoint 里的 key 和 shape
+    
+    参数:
+        ckpt_path (str): 权重文件路径
+        topk (int): 打印前多少个参数，默认 30
+    """
+    ckpt = torch.load(ckpt_path, map_location="cpu")
 
-#     # 输出模型结构（可选）
-#     print(model)
+    # 如果有 "model" key，就取出来
+    if isinstance(ckpt, dict) and "model" in ckpt:
+        ckpt = ckpt["model"]
 
-#     # 前向传播
-#     output = model(dummy_input)
+    print(f"✅ 总共有 {len(ckpt)} 个参数\n")
+    for i, (k, v) in enumerate(ckpt.items()):
+        print(f"{i:4d} | {k:50s} | {tuple(v.shape)}")
+        if i + 1 >= topk:
+            break
 
-#     # 输出结果 shape
-#     print("Input shape: ", dummy_input.shape)
-#     print("Output shape: ", output.shape)
+# ====== 用法 ======
+if __name__ == "__main__":
+
+    model = ReXNetV1(width_mult=1.0, classes=5, dropout_path=0.2)
+
+    # 遍历打印每一层的名字和参数 shape
+    for name, param in model.state_dict().items():
+        print(f"{name:40s} {tuple(param.shape)}")

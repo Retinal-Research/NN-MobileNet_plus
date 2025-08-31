@@ -133,7 +133,7 @@ def build_transform(is_train, args):
 
     if args.data_set == "MICCAI" or args.data_set == "odir":
         if is_train:
-            if args.data_set == "odir":
+            if args.data_set == "no":
                 return transforms.Compose([
                     transforms.RandomHorizontalFlip(p=0.5),
                     transforms.RandomRotation(

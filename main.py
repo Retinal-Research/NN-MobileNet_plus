@@ -281,15 +281,15 @@ def main(args):
 
     model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
     
-    # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
     # # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
-    # model.load_state_dict(checkpoint,strict=False)
-    # model.to(device)
+    model.load_state_dict(checkpoint,strict=False)
+    model.to(device)
 
     # 2) Load pretrained weights (already cleaned: only `features.*`, no `backbone.` prefix)
     # ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
     # model.load_state_dict(ckpt, strict=False)
-    model.to(device)
+    # model.to(device)
 
     # train_from = 7
     # for name, p in model.named_parameters():
