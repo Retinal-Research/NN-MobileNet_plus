@@ -4,11 +4,11 @@
 BATCH_SIZE=32
 INPUT_SIZE=224
 DATASET="odir"
-WEIGHT_DECAY=1e-4
-EPOCHS=500
+WEIGHT_DECAY=5e-4
+EPOCHS=200
 MAIN_EVAL="auc"
 NB_CLASSES=8
-EXP_TYPE="down_odir_multi_nnmpp"
+EXP_TYPE="down_baseline_levi"
 
 # 你的图像根目录
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
@@ -17,16 +17,16 @@ DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 FOLDS_DIR="/scratch/xinli38/data/ODIR/5-folds"   
 
 # ========= Swept Parameters =========
-OPT_LIST=("adamw")
-LR_LIST=("2e-4")
-DROP_PATH="0.01"
+OPT_LIST=("adamp")
+LR_LIST=("1e-3")
+DROP_PATH="0.2"
 MIXUP="0.0"
 CUTMIX="0.0"
 
 # ========= Loops: optimizer × lr × folds =========
 for OPT in "${OPT_LIST[@]}"; do
   for LR in "${LR_LIST[@]}"; do
-    for FOLD in {0..2}; do
+    for FOLD in {0..4}; do
 
       TRAIN_CSV="${FOLDS_DIR}/train_fold${FOLD}.csv"
       TEST_CSV="${FOLDS_DIR}/test_fold${FOLD}.csv"

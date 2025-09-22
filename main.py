@@ -279,12 +279,36 @@ def main(args):
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
-    model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
-    
-    checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
-    # # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/Experiment/dsc_x/MICCAI_lr1e-4_drop0.15_mix0.0_cut1.0_optadamp/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
-    model.load_state_dict(checkpoint,strict=False)
-    model.to(device)
+    # model = ReXNetV1(width_mult=1.0,classes=args.nb_classes,dropout_path=args.drop_path)
+       
+    # # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/merged_pretrained.pth', map_location='cpu', weights_only=False) 
+    # # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/vit_ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    # checkpoint = torch.load('/scratch/xinli38/challenge/Experiments/UWF4DR_task1/mbnpp/adamp_lr_1e-4_dp_0.0/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
+    # model.to(device)
+
+
+    # model = timm.create_model('swin_tiny_patch4_window7_224', pretrained=False, num_classes=args.nb_classes)
+    # # checkpoint = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/vit_ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
+    # checkpoint = torch.load('/scratch/xinli38/challenge/Experiments/UWF4DR_task3/swin/adamw_lr_1e-4_dp_0.05/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
+    # model.to(device)
+    # model = create_model('convnext_tiny', pretrained=False, num_classes=args.nb_classes)
+    # checkpoint = torch.load('/scratch/xinli38/challenge/Experiments/UWF4DR_task3/convnext/adamw_lr_1e-4_dp_0.05/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
+    # model.to(device)
+    # model = timm.create_model("inception_v4", pretrained=False, num_classes=args.nb_classes)
+    # checkpoint = torch.load('/scratch/xinli38/challenge/Experiments/UWF4DR_task3/inception/adamw_lr_1e-4_dp_0.05/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
+    # model.to(device)
+    # model = timm.create_model("vit_base_patch16_224", pretrained=False, num_classes=args.nb_classes)
+    # model = timm.create_model("levit_256", pretrained=False, num_classes=args.nb_classes)     
+    # model = timm.create_model("mobilenetv2_100", pretrained=False, num_classes=args.nb_classes)     
+    # model = timm.create_model("mobilevit_s", pretrained=False, num_classes=args.nb_classes) 
+    # checkpoint = torch.load('/scratch/xinli38/challenge/Experiments/UWF4DR_task3/mbvit/adamw_lr_1e-3_dp_0.05/checkpoint-best.pth', map_location='cpu', weights_only=False)['model']
+    # model.load_state_dict(checkpoint,strict=True)
+    # model.to(device)
+    # model = timm.create_model("vit_tiny_patch16_224", pretrained=False, num_classes=args.nb_classes)
 
     # 2) Load pretrained weights (already cleaned: only `features.*`, no `backbone.` prefix)
     # ckpt = torch.load('/scratch/xinli38/nn-mobilenet++/pretrained_weights/ckpt_epoch_799.pth', map_location='cpu', weights_only=False)
@@ -307,7 +331,18 @@ def main(args):
     # trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     # frozen    = sum(p.numel() for p in model.parameters() if not p.requires_grad)
     # print(f"Trainable params: {trainable} | Frozen params: {frozen}")
-    
+
+    # model = timm.create_model('efficientnetv2_s', pretrained=False, num_classes=args.nb_classes)         
+    # model = timm.create_model('swin_tiny_patch4_window7_224', pretrained=False, num_classes=args.nb_classes)
+    # model = create_model('convnext_tiny', pretrained=False, num_classes=args.nb_classes)
+    # model = timm.create_model("inception_v4", pretrained=False, num_classes=args.nb_classes)
+    # model = timm.create_model("vit_base_patch16_224", pretrained=False, num_classes=args.nb_classes)
+    # model = timm.create_model("levit_256", pretrained=False, num_classes=args.nb_classes)     
+    # model = timm.create_model("mobilenetv2_100", pretrained=False, num_classes=args.nb_classes)     
+    # model = timm.create_model("mobilevit_s", pretrained=False, num_classes=args.nb_classes) 
+    # model = timm.create_model("vit_tiny_patch16_224", pretrained=False, num_classes=args.nb_classes)
+
+    model.to(device)
 
 
 
@@ -404,7 +439,7 @@ def main(args):
     
     best_log_stats = None
     log_stats = None
-    early_stopping = EarlyStopping(patience=100)
+    early_stopping = EarlyStopping(patience=200)
 
     print("Start training for %d epochs" % args.epochs)
     start_time = time.time()

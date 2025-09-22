@@ -1,25 +1,25 @@
 #!/bin/bash
 
 # === Fixed Config ===
-BATCH_SIZE=24
+BATCH_SIZE=32
 INPUT_SIZE=224
 DATASET="MICCAI"
-WEIGHT_DECAY=1e-4
-EPOCHS=1200
+WEIGHT_DECAY=5e-4
+EPOCHS=500
 MAIN_EVAL="auc"
 NB_CLASSES=5
-EXP_TYPE="dsc+attn+pretrained_no_frz"
+EXP_TYPE="MICCAI_baseline/baseline_mbnpp"
 
 TRAIN_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Training_Labels.csv"
 TEST_CSV="/scratch/xinli38/data/MICCAI/label/MMAC2023_Myopic_Maculopathy_Classification_Validation_Labels.csv"
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
 # === Swept Parameters ===
-OPT_LIST=("adamp" "radam" "adamw")
-LR_LIST=("2e-4" "3e-4")
-DROP_PATH="0.02"
-MIXUP="0.4"
-CUTMIX="1.0"
+OPT_LIST=("adamw")
+LR_LIST=("1e-4")
+DROP_PATH="0.00"
+MIXUP="0.0"
+CUTMIX="0.0"
 
 # === Nested Loop ===
 for OPT in "${OPT_LIST[@]}"; do

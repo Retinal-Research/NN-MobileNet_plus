@@ -2,7 +2,30 @@ import torch
 import torch.nn as nn
 
 from einops import rearrange
+import torch.nn.functional as F
 
+#
+# For licensing see accompanying LICENSE file.
+# Copyright (C) 2023 Apple Inc. All Rights Reserved.
+#
+
+from typing import Dict, Optional, Sequence, Tuple, Union, Any
+
+import torch
+from torch import Tensor, nn
+
+
+class BaseModule(nn.Module):
+    """Base class for all modules"""
+
+    def __init__(self, *args, **kwargs):
+        super(BaseModule, self).__init__()
+
+    def forward(self, x: Any, *args, **kwargs) -> Any:
+        raise NotImplementedError
+
+    def __repr__(self):
+        return "{}".format(self.__class__.__name__)
 
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
@@ -71,6 +94,46 @@ class Attention(nn.Module):
         out = rearrange(out, 'b p h n d -> b p n (h d)')
         return self.to_out(out)
 
+class MV2Block(nn.Module):
+    def __init__(self, inp, oup, stride=1, expansion=4):
+        super().__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+
+        hidden_dim = int(inp * expansion)
+        self.use_res_connect = self.stride == 1 and inp == oup
+
+        if expansion == 1:
+            self.conv = nn.Sequential(
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.SiLU(),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+        else:
+            self.conv = nn.Sequential(
+                # pw
+                nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.SiLU(),
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.SiLU(),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+
+    def forward(self, x):
+        if self.use_res_connect:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
 
 class Transformer(nn.Module):
     def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout=0.):
@@ -95,51 +158,45 @@ class MobileViTBlock(nn.Module):
 
         self.conv1 = conv_nxn_bn(channel, channel, kernel_size)
         self.conv2 = conv_1x1_bn(channel, dim)
-
-        self.transformer = Transformer(dim, depth, 4, 8, mlp_dim, dropout)
+        heads = 4                  
+        dim_head = dim // heads
+        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
 
         self.conv3 = conv_1x1_bn(dim, channel)
         self.conv4 = conv_nxn_bn(2 * channel, channel, kernel_size)
     
     def forward(self, x):
-        y = x.clone()
+        # 原始尺寸
+        h0, w0 = x.shape[-2], x.shape[-1]
+
+        # 计算需要补齐到 (ph, pw) 倍数的 pad（右、下方向）
+        pad_h = (self.ph - (h0 % self.ph)) % self.ph
+        pad_w = (self.pw - (w0 % self.pw)) % self.pw
+
+        if pad_h or pad_w:
+            # F.pad 顺序: (left, right, top, bottom)
+            x = F.pad(x, (0, pad_w, 0, pad_h), mode="replicate")
+        # 残差分支：用 pad 后的特征，保证与主分支空间尺寸一致
+        y = x
 
         # Local representations
         x = self.conv1(x)
-        x = self.conv2(x)
-        
-        # Global representations
-        _, _, h, w = x.shape
-        x = rearrange(x, 'b d (h ph) (w pw) -> b (ph pw) (h w) d', ph=self.ph, pw=self.pw)
+        x = self.conv2(x)   # [B, dim, Hpad, Wpad]
+
+        # Global representations (展开为 patch，Transformer，再折回)
+        b, d, h, w = x.shape
+        x = rearrange(x, 'b d (hh ph) (ww pw) -> b (ph pw) (hh ww) d', ph=self.ph, pw=self.pw)
         x = self.transformer(x)
-        x = rearrange(x, 'b (ph pw) (h w) d -> b d (h ph) (w pw)', h=h//self.ph, w=w//self.pw, ph=self.ph, pw=self.pw)
+        x = rearrange(x, 'b (ph pw) (hh ww) d -> b d (hh ph) (ww pw)',
+                    ph=self.ph, pw=self.pw, hh=h // self.ph, ww=w // self.pw)
 
         # Fusion
         x = self.conv3(x)
-        x = torch.cat((x, y), 1)
+        x = torch.cat((x, y), dim=1)   # 与 v1 相同的融合方式
         x = self.conv4(x)
+
+        # 裁回原始尺寸
+        if pad_h or pad_w:
+            x = x[:, :, :h0, :w0]
+
         return x
-if __name__ == "__main__":
-    # 假设输入通道为 64，输出通道为 64，Transformer维度为 96
-    block = MobileViTBlock(
-        dim=96,           # Transformer中token的维度
-        depth=2,          # Transformer block数
-        channel=64,       # 输入/输出卷积通道
-        kernel_size=3,
-        patch_size=(2, 2),
-        mlp_dim=192,      # FeedForward中隐藏层维度（一般为dim的2~4倍）
-        dropout=0.1
-    )
-
-    # 将 block 放到 GPU（如果可用）
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    block = block.to(device)
-
-    # 构造假输入（batch_size=2，通道=64，高宽=32x32）
-    x = torch.randn(2, 64, 32, 32).to(device)
-
-    # 前向传播
-    out = block(x)
-
-    print("Input shape:", x.shape)
-    print("Output shape:", out.shape)

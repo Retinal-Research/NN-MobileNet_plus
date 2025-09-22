@@ -8,16 +8,16 @@ WEIGHT_DECAY=5e-4
 EPOCHS=1200
 MAIN_EVAL="auc"
 NB_CLASSES=5
-EXP_TYPE="down_odir_bin"
+EXP_TYPE="down_idrid_npp_weighted"
 
 TRAIN_CSV="/scratch/xinli38/data/IDRID/train.csv"
 TEST_CSV="/scratch/xinli38/data/IDRID/test.csv"
 DATA_PATH="/scratch/xinli38/data/MICCAI/image"
 
 # === Swept Parameters ===
-OPT_LIST=("adamp" "adamw" "radam")
-LR_LIST=("2e-4" "3e-4")
-DROP_PATH="0.15"
+OPT_LIST=("adamp" "adamw" "rdamp")
+LR_LIST=("1e-4" "1e-4" "1e-4")
+DROP_PATH="0"
 MIXUP="0.0"
 CUTMIX="0.0"
 

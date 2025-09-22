@@ -9,6 +9,7 @@ from dataloader.Rsnr import RSNR
 from dataloader.MICCAI import MICCAI
 from dataloader.EyeQ import EyeQ
 from dataloader.IDRID import IDRID
+from dataloader.UWF4DR import UWF4DR, MuCaRD, MURED
 
 from timm.data.constants import \
     IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
@@ -52,10 +53,12 @@ def build_dataset(is_train, args):
         
     elif args.data_set == "UWF4DR":
         if is_train:
-            dataset = UWF4DR(args.fold_train, transform=transform)
+            dataset = UWF4DR(image_dir='/scratch/xinli38/data/UWF4DR/train',label_dir=args.fold_train,transform=transform)
+            # dataset = UWF4DR(args.fold_train, transform=transform)
         else:
-            dataset = UWF4DR(args.fold_test, transform=transform)
-        nb_classes = 2
+            dataset = UWF4DR(image_dir='/scratch/xinli38/data/UWF4DR/test',label_dir=args.fold_test,transform=transform)
+            # dataset = UWF4DR(args.fold_test, transform=transform)
+        nb_classes = args.nb_classes
         
     elif args.data_set == "messidor1":
         if is_train: 

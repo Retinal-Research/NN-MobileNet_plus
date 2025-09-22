@@ -7,8 +7,9 @@ MIT license
 import torch
 import torch.nn as nn
 from math import ceil
-from S3_DSConv_pro import DSConv_pro
-from vit_block import MobileViTBlock
+from model.S3_DSConv_pro import DSConv_pro
+from model.vit_block import MobileViTBlock, conv_1x1_bn, MV2Block
+# from vit_block import MobileViTBlockv2
 
 USE_MEMORY_EFFICIENT_SiLU = True
 
@@ -86,7 +87,14 @@ def ConvBNSiLU(out, in_channels, channels, kernel=1, stride=1, pad=0, num_group=
     out.append(nn.BatchNorm2d(channels))
     out.append(SiLU(inplace=True))
 
+class Adapter(nn.Module):
+    def __init__(self, in_c, out_c):
+        super().__init__()
+        self.proj = nn.Conv2d(in_c, out_c, kernel_size=1, bias=False)
+        self.bn   = nn.BatchNorm2d(out_c)
 
+    def forward(self, x):
+        return self.bn(self.proj(x))
 
 class LinearBottleneck(nn.Module):
     def __init__(self, in_channels, channels, t, stride, dim, use_vit=False, use_dsc = False, se_ratio=12, dropout = 0.0, L=2,
@@ -97,25 +105,31 @@ class LinearBottleneck(nn.Module):
         self.out_channels = channels
         self.drop = nn.Dropout2d(dropout)
         out = []
-
-        if t != 1:
-            dw_channels = in_channels * t
-            ConvBNSiLU(out, in_channels=in_channels, channels=dw_channels)
+        if use_vit and L!=2:
+            out.append(MV2Block(in_channels, channels, stride=stride, expansion=4))
         else:
-            dw_channels = in_channels
+            if t != 1:
+                dw_channels = in_channels * t
 
-        if stride == 2 and use_dsc:
-            DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
-        else :
-            ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
-                    num_group=dw_channels, active=False)
+                ConvBNSiLU(out, in_channels=in_channels, channels=dw_channels)
+            else:
+                dw_channels = in_channels
 
+            if stride == 2 and use_dsc:
+                DSConvBN(out, in_channels=dw_channels, out_channels=dw_channels, kernel_size=3, morph=0)
+            else :
+                ConvBNAct(out, in_channels=dw_channels, channels=dw_channels, kernel=3, stride=stride, pad=1,
+                        num_group=dw_channels, active=False)
 
-        out.append(nn.ReLU6())
-        ConvBNAct(out, in_channels=dw_channels, channels=channels, active=False, relu6=True)
+            out.append(nn.ReLU6())
+            ConvBNAct(out, in_channels=dw_channels, channels=channels, active=False, relu6=True)
         
         if use_vit:
-            out.append(MobileViTBlock(dim, L, channels, 3, (2,2), int(dim * 2)))
+            if L == 2:
+                out.append(Adapter(61, 64))                
+                out.append(MobileViTBlock(dim, L, 64, 3, (2,2), int(dim * 2)))
+            else:
+                out.append(MobileViTBlock(dim, L, channels, 3, (2,2), int(dim * 2)))
 
         self.out = nn.Sequential(*out)
 
@@ -144,9 +158,9 @@ class ReXNetV1(nn.Module):
         dim = [
             0,        # stage 0: 1 block
             0, 0,     # stage 1: 2 blocks
-            0, 180,   # stage 2: 2 blocks
-            216,         # stage 3: 1 block
-            256          # stage 4: 1 block
+            0, 96,   # stage 2: 2 blocks
+            120,         # stage 3: 1 block
+            144          # stage 4: 1 block
         ]
 
         L  = [
@@ -157,7 +171,6 @@ class ReXNetV1(nn.Module):
             3          # stage 4: 1 block
         ]
 
-                # use_ses = [False, False, True, True, True, True]
         use_vit_blocks = [
             False,        # stage 0: 1 block
             False, False, # stage 1: 2 blocks
@@ -171,47 +184,50 @@ class ReXNetV1(nn.Module):
 
             
         ts = [1] * layers[0] + [6] * sum(layers[1:])
-
+        print(ts)
         self.depth = sum(layers[:])
         stem_channel = 32 / width_mult if width_mult < 1.0 else 32
         inplanes = input_ch / width_mult if width_mult < 1.0 else input_ch
 
         features = []
-        in_channels_group = []
-        channels_group = []
+        in_channels_group = [32, 16, 27, 38, 50, 64, 80]
+        channels_group = [16, 27, 38, 50, 61, 80, 96]
         # The following channel configuration is a simple instance to make each layer become an expand layer.
-        for i in range(self.depth):
-            if i == 0:
-                in_channels_group.append(int(round(stem_channel * width_mult)))
-                channels_group.append(int(round(inplanes * width_mult)))
-            else:
-                in_channels_group.append(int(round(inplanes * width_mult)))
-                inplanes += final_ch / (self.depth * 1.0)
-                channels_group.append(int(round(inplanes * width_mult)))
+        # for i in range(self.depth):
+        #     if i == 0:
+        #         in_channels_group.append(int(round(stem_channel * width_mult)))
+        #         channels_group.append(int(round(inplanes * width_mult)))
+        #     else:
+        #         in_channels_group.append(int(round(inplanes * width_mult)))
+        #         inplanes += final_ch / (self.depth * 1.0)
+        #         channels_group.append(int(round(inplanes * width_mult)))
 
         ConvBNSiLU(features, 3, int(round(stem_channel * width_mult)), kernel=3, stride=2, pad=1)
         print(in_channels_group)
         print(channels_group)
         for block_idx, (in_c, c, t, s, vit, d, l) in enumerate(zip(in_channels_group, channels_group, ts, strides, use_vit_blocks, dim, L)):
+
             features.append(LinearBottleneck(in_channels=in_c,
                                              channels=c,
                                              t=t,
                                              stride=s,
                                              dim= d,
                                              L = l,
-                                             se_ratio=se_ratio, dropout = dropout_path, use_vit=vit, use_dsc=True if block_idx >= 5 else False))
+                                             se_ratio=se_ratio, dropout = dropout_path, use_vit=vit, use_dsc=False if block_idx == 3 else False))
 
         # pen_channels = int(1280 * width_mult)
         # ConvBNSiLU(features, c, pen_channels)
+        features.append(conv_1x1_bn(96, 384))
 
         features.append(nn.AdaptiveAvgPool2d(1))
+
         self.features = nn.Sequential(*features)
         # self.output = nn.Sequential(
         #     nn.Dropout(dropout_ratio),
         #     nn.Conv2d(pen_channels, classes, 1, bias=True))
         self.out = nn.Sequential(
             nn.Dropout(dropout_ratio),
-            nn.Conv2d(c, classes, 1, bias=True))
+            nn.Conv2d(384, classes, 1, bias=True))
     def extract_features(self, x):
         return self.features[:-1](x)
     
@@ -241,12 +257,3 @@ def inspect_checkpoint(ckpt_path, topk=30):
         print(f"{i:4d} | {k:50s} | {tuple(v.shape)}")
         if i + 1 >= topk:
             break
-
-# ====== 用法 ======
-if __name__ == "__main__":
-
-    model = ReXNetV1(width_mult=1.0, classes=5, dropout_path=0.2)
-
-    # 遍历打印每一层的名字和参数 shape
-    for name, param in model.state_dict().items():
-        print(f"{name:40s} {tuple(param.shape)}")
