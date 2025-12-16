@@ -1,4 +1,4 @@
-# nnMobileNet++: Towards Efficient Hybrid Networks for Retinal Image Analysis**
+# nnMobileNet++: Towards Efficient Hybrid Networks for Retinal Image Analysis
 
 Xin Li, Wenhui Zhu, XUANZHAO DONG, Hao Wang, Yujian Xiong, Oana Dumitrascu, Yalin Wang
 
